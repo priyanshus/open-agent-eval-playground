@@ -1,0 +1,7 @@
+langchain
+langchain-openai
+fastapi
+python-dotenv
+langfuse
+requests
+pytest
