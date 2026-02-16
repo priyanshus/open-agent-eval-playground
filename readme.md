@@ -11,3 +11,12 @@ At present, it has:
 
 ## Architecture
 User Query → Router → Execution Plan → Executor → Tools → LLM (final response)
+
+## How to Run
+```
+cd frontend
+npm install
+npm run dev
+
+uvicorn backend.main:app --host 0.0.0.0 --port 8080   
+```
