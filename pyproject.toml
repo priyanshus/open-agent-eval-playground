@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-playground"
+version = "0.1.0"
+description = "CLI for chat agent"
+
+[project.scripts]
+agent = "app:main"
+
+[tool.setuptools]
+py-modules = ["app"]

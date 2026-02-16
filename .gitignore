@@ -215,3 +215,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Frontend (Next.js) – see also frontend/.gitignore
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build
+frontend/coverage
+frontend/.pnp
+frontend/.pnp.js
+frontend/.env*.local
+frontend/.env
+frontend/.vercel
+frontend/*.tsbuildinfo
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# misc
+.DS_Store
+*.pem
+
+.idea
