@@ -10,6 +10,7 @@ from langgraph.graph import StateGraph
 from backend.checkpoint_manager import CheckpointerManager
 from backend.llm.client import create_llm_client
 from backend.nodes.flight.extract_flight_preferences import ExtractFlightPreferences
+from backend.nodes.flight.search_flight import SearchFlight
 from backend.nodes.itinerary.extract_itinerary_preferences import ExtractItineraryPreferences
 from backend.nodes.user_intent_classifier import UserIntentClassifier
 from backend.schema.models import State, IntentType
@@ -19,12 +20,10 @@ class IntentClassifierAgent:
     def __init__(self, llm_client:BaseChatModel):
         self.workflow = None
         self._checkpointer = CheckpointerManager(os.getenv("POSTGRES_URI")).setup()
-
         self.user_intent_classifier = UserIntentClassifier(llm_client)
-
         self.extract_itinerary_preferences = ExtractItineraryPreferences(llm_client)
-
         self.extract_flight_preferences = ExtractFlightPreferences(llm_client)
+        self.search_flight = SearchFlight(llm_client)
 
     def route_intent(self, state: State):
         if state.intent != IntentType.UNKNOWN and state.confidence > 0.6:
@@ -41,6 +40,8 @@ class IntentClassifierAgent:
 
         return "graceful_exit"
 
+
+
     def route_to_plan(self, state: State):
         print("im in routing further")
         print("Received prefs: ", *state)
@@ -56,6 +57,7 @@ class IntentClassifierAgent:
         graph.add_node("extract_flight_preferences", self.extract_flight_preferences)
         graph.add_node("graceful_exit", self.gracefully_exit)
         graph.add_node("route_to_plan", self.route_to_plan)
+        graph.add_node("search_flight", self.search_flight)
 
         graph.add_edge(START, "user_intent_classifier")
 
@@ -70,7 +72,8 @@ class IntentClassifierAgent:
         )
 
         graph.add_edge("extract_itinerary_preferences", "route_to_plan")
-        graph.add_edge("extract_flight_preferences", "route_to_plan")
+        graph.add_edge("extract_flight_preferences", "search_flight")
+        graph.add_edge("search_flight", END)
         graph.add_edge("route_to_plan", END)
 
         graph.add_edge("graceful_exit", END)
@@ -78,7 +81,6 @@ class IntentClassifierAgent:
         self.workflow = graph.compile(checkpointer=self._checkpointer)
 
     def invoke(self, user_input: str, session_id: str) -> dict[str, str]:
-        """Return response (only final AI message) and thinking (all reasoning/thinking for AI Thinking block)."""
         thinking_parts: set[str] = set()
         ai_message_content = ""
         printed_message_ids: set = set()

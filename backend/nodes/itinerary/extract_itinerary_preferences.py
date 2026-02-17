@@ -52,7 +52,7 @@ class ExtractItineraryPreferences(BaseNode):
             missing_fields.append("destination")
         if not preferences.travel_dates and preferences.duration_days is None:
             missing_fields.append("travel dates or duration")
-        if not preferences.departure_city:
+        if not preferences.origin:
             missing_fields.append("departure city")
         if preferences.number_of_travelers is None:
             missing_fields.append("number of travelers")

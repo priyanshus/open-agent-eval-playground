@@ -14,7 +14,7 @@ def get_prompt(name: str) -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
-def get_system_prompt(self, state: State) -> str:
+def get_system_prompt(state: State) -> str:
     match state.intent:
         case IntentType.TRAVEL_PLANNING:
             return get_prompt(

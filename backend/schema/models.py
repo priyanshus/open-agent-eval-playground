@@ -87,7 +87,7 @@ class FlightBookingPreferences(BasePreferences):
         default=None,
         description="City or country the user wants to visit"
     )
-    departure_city: Optional[str] = Field(
+    origin: Optional[str] = Field(
         default=None,
         description="Specify source city"
     )
@@ -106,8 +106,8 @@ class FlightBookingPreferences(BasePreferences):
             missing.append("destination")
         if not self.travel_dates:
             missing.append("travel_dates")
-        if not self.departure_city:
-            missing.append("departure_city")
+        if not self.origin:
+            missing.append("origin")
         if not self.number_of_travelers:
             missing.append("number_of_travelers")
 

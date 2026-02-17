@@ -2,7 +2,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, AIMessage
 
 from backend.nodes.base_node import BaseNode
-from backend.schema.models import FlightBookingPreferences
+from backend.schema.models import FlightBookingPreferences, State
 from backend.util.prompt_loader import get_system_prompt
 
 
@@ -10,7 +10,7 @@ class ExtractFlightPreferences(BaseNode):
     def __init__(self, llm_client: BaseChatModel):
         super().__init__(llm_client)
 
-    def __call__(self, state):
+    def __call__(self, state:State):
         prompts = [
             SystemMessage(content=get_system_prompt(state)),
             *state.messages
@@ -38,7 +38,7 @@ class ExtractFlightPreferences(BaseNode):
                 "Could you please share a few basics like:\n"
                 "- Destination\n"
                 "- Travel dates\n"
-                "- Departure city\n"
+                "- Origin\n"
                 "- Number of travelers\n"
                 "For example:\n"
                 "'I want to travel to Bali from Berlin on 31st Jan,2025 with 2 adults'"
@@ -50,8 +50,8 @@ class ExtractFlightPreferences(BaseNode):
             missing_fields.append("destination")
         if not preferences.travel_dates and preferences.duration_days is None:
             missing_fields.append("travel dates or duration")
-        if not preferences.departure_city:
-            missing_fields.append("departure city")
+        if not preferences.origin:
+            missing_fields.append("origin")
         if preferences.number_of_travelers is None:
             missing_fields.append("number of travelers")
 
@@ -75,8 +75,8 @@ class ExtractFlightPreferences(BaseNode):
             lines.append(f"- **Destination:** {preferences.destination}")
         if preferences.travel_dates:
             lines.append(f"- **Travel dates:** {preferences.travel_dates}")
-        if preferences.departure_city:
-            lines.append(f"- **Departure city:** {preferences.departure_city}")
+        if preferences.origin:
+            lines.append(f"- **Origin:** {preferences.origin}")
         if preferences.number_of_travelers is not None:
             lines.append(f"- **Travelers:** {preferences.number_of_travelers}")
         return "\n".join(lines)
