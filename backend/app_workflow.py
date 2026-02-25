@@ -49,9 +49,29 @@ class IntentClassifierAgent:
     def gracefully_exit(self, state: State):
         print('Im in exit')
 
+    def returning_user_middleware(self, state: State) -> dict:
+        """Detect returning user from merged state: new session has only this turn's message(s)."""
+        # For a new session the runtime loads no prior checkpoint, so messages = [current].
+        # For a returning session the runtime merged prior checkpoint + input, so messages > 1.
+        messages = state.messages or []
+        is_returning = len(messages) > 1
+        if is_returning:
+            print("returning user")
+        return {"is_returning_user": is_returning}
+
+    def route_after_middleware(self, state: State) -> str:
+        """Returning user with intent already set -> update preferences (delta). Else -> intent classifier."""
+        if state.is_returning_user and state.intent is not None and state.intent != IntentType.UNKNOWN:
+            if state.intent == IntentType.FLIGHT_BOOKING:
+                return "extract_flight_preferences"
+            if state.intent == IntentType.TRAVEL_PLANNING:
+                return "extract_itinerary_preferences"
+        return "user_intent_classifier"
+
     def build_workflow(self):
         graph = StateGraph(State)
 
+        graph.add_node("returning_user_middleware", self.returning_user_middleware)
         graph.add_node("user_intent_classifier", self.user_intent_classifier)
         graph.add_node("extract_itinerary_preferences", self.extract_itinerary_preferences)
         graph.add_node("extract_flight_preferences", self.extract_flight_preferences)
@@ -59,7 +79,16 @@ class IntentClassifierAgent:
         graph.add_node("route_to_plan", self.route_to_plan)
         graph.add_node("search_flight", self.search_flight)
 
-        graph.add_edge(START, "user_intent_classifier")
+        graph.add_edge(START, "returning_user_middleware")
+        graph.add_conditional_edges(
+            "returning_user_middleware",
+            self.route_after_middleware,
+            {
+                "user_intent_classifier": "user_intent_classifier",
+                "extract_flight_preferences": "extract_flight_preferences",
+                "extract_itinerary_preferences": "extract_itinerary_preferences",
+            },
+        )
 
         graph.add_conditional_edges(
             "user_intent_classifier",
@@ -80,34 +109,46 @@ class IntentClassifierAgent:
 
         self.workflow = graph.compile(checkpointer=self._checkpointer)
 
-    def invoke(self, user_input: str, session_id: str) -> dict[str, str]:
+    def invoke(self, user_input: str, session_id: str) -> dict:
         thinking_parts: set[str] = set()
         ai_message_content = ""
         printed_message_ids: set = set()
+        trajectory: list[str] = []
+        last_values: dict = {}
 
-        for event in self.workflow.stream(
-            {"messages": [("user", user_input)]},
-            stream_mode="values",
-            config={"configurable": {"thread_id": session_id or str(uuid.uuid4())}},
-        ):
-            if event.get("reasoning"):
-                thinking_parts.add(event["reasoning"].strip())
-            if event.get("thinking"):
-                thinking_parts.add(event["thinking"].strip())
-
-            messages = event.get("messages", [])
-            if messages:
-                last_message = messages[-1]
-                if isinstance(last_message, AIMessage):
-                    message_id = getattr(last_message, "id", None)
-                    if message_id not in printed_message_ids:
-                        printed_message_ids.add(message_id)
-                        content = getattr(last_message, "content", None)
-                        if isinstance(content, str):
-                            ai_message_content = content
+        thread_id = session_id or str(uuid.uuid4())
+        config = {"configurable": {"thread_id": thread_id}}
+        stream = self.workflow.stream(
+            {"messages": [("user", user_input)], "session_id": thread_id},
+            config=config,
+            stream_mode=["updates", "values"],
+        )
+        for mode, chunk in stream:
+            if mode == "updates":
+                trajectory.extend(chunk.keys())
+            if mode == "values":
+                last_values = chunk
+                if chunk.get("reasoning"):
+                    thinking_parts.add(chunk["reasoning"].strip())
+                if chunk.get("thinking"):
+                    thinking_parts.add(chunk["thinking"].strip())
+                messages = chunk.get("messages", [])
+                if messages:
+                    last_message = messages[-1]
+                    if isinstance(last_message, AIMessage):
+                        message_id = getattr(last_message, "id", None)
+                        if message_id not in printed_message_ids:
+                            printed_message_ids.add(message_id)
+                            content = getattr(last_message, "content", None)
+                            if isinstance(content, str):
+                                ai_message_content = content
 
         thinking = "\n".join(thinking_parts).strip() if thinking_parts else ""
-        return {"response": ai_message_content or "", "thinking": thinking}
+        return {
+            "response": ai_message_content or "",
+            "thinking": thinking,
+            "trajectory": trajectory,
+        }
 
     def visualize_workflow(self, output_path: str = "workflow_graph.png"):
         try:

@@ -11,7 +11,7 @@ class SearchFlight(BaseNode):
         super().__init__(llm_client)
 
     def __call__(self, state: State) -> dict:
-        preferences = state.preferences
+        preferences = state.flight_booking_preferences
         if not isinstance(preferences, FlightBookingPreferences):
             return {
                 "messages": [

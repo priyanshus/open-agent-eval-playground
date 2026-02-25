@@ -12,8 +12,8 @@ pydantic~=2.12.5
 langchain-community~=0.3.31
 langchain-openai
 langchain_core
-langgraph-checkpoint-postgres
 psycopg[binary,pool]
 asyncpg
 asyncio
 rich
+langgraph-checkpoint-postgres

@@ -23,6 +23,17 @@ class ChatPayload(BaseModel):
     session_id: str | None = None
 
 
-@router.post("/chat")
-def chat(request: ChatPayload) -> dict[str, str]:
-    return _get_agent().invoke(request.user_query, request.session_id or "")
+class ChatResponse(BaseModel):
+    response: str
+    thinking: str
+    trajectory: list[str]
+
+
+@router.post("/chat", response_model=ChatResponse)
+def chat(request: ChatPayload) -> ChatResponse:
+    result = _get_agent().invoke(request.user_query, request.session_id or "")
+    return ChatResponse(
+        response=result["response"],
+        thinking=result["thinking"],
+        trajectory=result["trajectory"],
+    )

@@ -32,7 +32,7 @@ Output Requirements:
 Output Schema:
 
 {
-  "intent": "travel_planning" | "flight_booking" | "hotel_booking" | "refund_request" | "small_talk" | "unknown",
+  "intent": "travel_planning" | "flight_booking" | "hotel_booking" | "refund_request" | "unknown",
   "confidence": float,
   "reasoning": string,
   "clarification_question": string | null

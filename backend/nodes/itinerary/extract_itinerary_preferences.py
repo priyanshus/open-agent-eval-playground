@@ -23,10 +23,10 @@ class ExtractItineraryPreferences(BaseNode):
 
             if not result.is_complete():
                 ai_message = self._build_error_message(result)
-                return {"preferences": result, "messages": [AIMessage(content=ai_message)]}
+                return {"itinerary_preferences": result, "messages": [AIMessage(content=ai_message)]}
             else:
                 ai_message = self._build_success_message(result)
-                return {"preferences": result, "messages": [AIMessage(content=ai_message)]}
+                return {"itinerary_preferences": result, "messages": [AIMessage(content=ai_message)]}
 
         except Exception as e:
             print("ACTUAL ERROR:", type(e), str(e))
@@ -39,7 +39,7 @@ class ExtractItineraryPreferences(BaseNode):
                 "Could you please share a few basics like:\n"
                 "- Destination\n"
                 "- Travel dates or duration\n"
-                "- Departure city\n"
+                "- Origin\n"
                 "- Number of travelers\n"
                 "- Budget (if any preference)\n\n"
                 "For example:\n"
@@ -53,7 +53,7 @@ class ExtractItineraryPreferences(BaseNode):
         if not preferences.travel_dates and preferences.duration_days is None:
             missing_fields.append("travel dates or duration")
         if not preferences.origin:
-            missing_fields.append("departure city")
+            missing_fields.append("origin")
         if preferences.number_of_travelers is None:
             missing_fields.append("number of travelers")
 
@@ -79,8 +79,8 @@ class ExtractItineraryPreferences(BaseNode):
             lines.append(f"- **Travel dates:** {preferences.travel_dates}")
         if preferences.duration_days is not None:
             lines.append(f"- **Duration:** {preferences.duration_days} days")
-        if preferences.departure_city:
-            lines.append(f"- **Departure city:** {preferences.departure_city}")
+        if preferences.origin:
+            lines.append(f"- **Departure city:** {preferences.origin}")
         if preferences.number_of_travelers is not None:
             lines.append(f"- **Travelers:** {preferences.number_of_travelers}")
         if preferences.budget:

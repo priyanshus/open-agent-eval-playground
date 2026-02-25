@@ -17,7 +17,6 @@ class UserIntentClassifier(BaseNode):
             SystemMessage(content=self._extract_user_intent_prompt),
             *state.messages
         ]
-
         structured_llm = self._llm_client.with_structured_output(IntentOutput)
 
         try:

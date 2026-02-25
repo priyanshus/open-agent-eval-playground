@@ -22,10 +22,10 @@ class ExtractFlightPreferences(BaseNode):
 
             if not result.is_complete():
                 ai_message = self._build_error_message(result)
-                return {"preferences": result, "messages": [AIMessage(content=ai_message)]}
+                return {"flight_booking_preferences": result, "messages": [AIMessage(content=ai_message)]}
             else:
                 ai_message = self._build_success_message(result)
-                return {"preferences": result, "messages": [AIMessage(content=ai_message)]}
+                return {"flight_booking_preferences": result, "messages": [AIMessage(content=ai_message)]}
 
         except Exception as e:
             print("ACTUAL ERROR:", type(e), str(e))

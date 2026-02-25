@@ -21,21 +21,6 @@ class IntentType(str, Enum):
     REFUND_REQUEST = "refund_request"
     UNKNOWN = "unknown"
 
-class State(BaseModel):
-    messages: Annotated[List[BaseMessage], add_messages] = Field(default_factory=list)
-    intent: Optional[IntentType] = None
-
-    confidence: Optional[float] = None
-    reasoning: Optional[str] = None
-    clarification_question: Optional[str] = None
-
-    retry_count: int = 0
-
-    model_config = {
-        "arbitrary_types_allowed": True
-    }
-    preferences: Optional[BasePreferences] = None
-
 
 class IntentOutput(BaseModel):
     intent: IntentType = None
@@ -57,7 +42,7 @@ class ItineraryPreferences(BasePreferences):
         default=None,
         description="Number of days for the trip"
     )
-    departure_city: Optional[str] = None
+    origin: Optional[str] = None
     budget: Optional[str] = Field(
         default=None,
         description="Budget range or total trip budget"
@@ -76,8 +61,8 @@ class ItineraryPreferences(BasePreferences):
             missing.append("travel_dates")
         if not self.duration_days:
             missing.append("duration_days")
-        if not self.departure_city:
-            missing.append("departure_city")
+        if not self.origin:
+            missing.append("origin")
 
         return missing
 
@@ -112,3 +97,19 @@ class FlightBookingPreferences(BasePreferences):
             missing.append("number_of_travelers")
 
         return missing
+
+class State(BaseModel):
+    messages: Annotated[List[BaseMessage], add_messages] = Field(default_factory=list)
+    session_id: Optional[str] = None
+    is_returning_user: Optional[bool] = None
+    intent: Optional[IntentType] = None
+
+    confidence: Optional[float] = None
+    reasoning: Optional[str] = None
+    clarification_question: Optional[str] = None
+
+    retry_count: int = 0
+    flight_booking_preferences: FlightBookingPreferences = Field(default_factory=FlightBookingPreferences)
+    itinerary_preferences: ItineraryPreferences = Field(default_factory=ItineraryPreferences)
+
+    model_config = {"arbitrary_types_allowed": True}
