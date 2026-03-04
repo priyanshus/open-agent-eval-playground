@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 from langgraph.graph import add_messages
@@ -27,6 +27,15 @@ class IntentOutput(BaseModel):
     confidence: float
     reasoning: str
     clarification_question: Optional[str] = None
+
+
+class UserConfirmationOutput(BaseModel):
+    """User intent after seeing flight search results: confirm booking or cancel."""
+
+    action: Literal["confirm", "cancel"] = Field(
+        ...,
+        description="'confirm' if user wants to book the flight, 'cancel' if user declines or wants to exit",
+    )
 
 
 class ItineraryPreferences(BasePreferences):
@@ -111,5 +120,12 @@ class State(BaseModel):
     retry_count: int = 0
     flight_booking_preferences: FlightBookingPreferences = Field(default_factory=FlightBookingPreferences)
     itinerary_preferences: ItineraryPreferences = Field(default_factory=ItineraryPreferences)
+
+    # After search_flight: selected flight for booking; cleared after book or cancel
+    last_flight_search_result: Optional[Dict[str, Any]] = None
+    confirmation_action: Optional[Literal["confirm", "cancel"]] = None
+
+    # Session-level: True once a flight has been successfully booked this session; prevents starting a new booking workflow
+    flight_booked: bool = False
 
     model_config = {"arbitrary_types_allowed": True}

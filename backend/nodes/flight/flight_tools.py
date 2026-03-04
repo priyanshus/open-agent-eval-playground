@@ -7,6 +7,12 @@ from backend.service.FlightService import FlightService
 from backend.service.models import FlightSearchRequest, FlightSearchResponse
 
 
+@tool(description="book flight api call")
+def book_flight(flight_payload: dict) -> dict:
+    flight_service = FlightService()
+    return flight_service.book_flight(flight_payload)
+
+
 def _to_flight_search_payload(preferences: Union[FlightBookingPreferences, dict]) -> FlightSearchRequest:
     raw = preferences.number_of_travelers
     if raw is None:
@@ -32,9 +38,8 @@ def _to_flight_search_payload(preferences: Union[FlightBookingPreferences, dict]
     )
 
 
-@tool("Search flight api call")
+@tool(description="search flight api call")
 def search_flight(preferences: Union[FlightBookingPreferences, dict]) -> FlightSearchResponse:
-    """Search for flights using the given booking preferences (origin, destination, number_of_travelers)."""
     flight_service = FlightService()
     payload = _to_flight_search_payload(preferences)
     return flight_service.search_flight(payload)

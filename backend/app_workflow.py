@@ -8,7 +8,10 @@ from langgraph.constants import END, START
 from langgraph.graph import StateGraph
 
 from backend.checkpoint_manager import CheckpointerManager
+from backend.nodes.flight.flight_already_booked import FlightAlreadyBooked
 from backend.llm.client import create_llm_client
+from backend.nodes.flight.book_flight import BookFlight
+from backend.nodes.flight.extract_flight_booking_confirmation import ExtractFlightBookingConfirmation
 from backend.nodes.flight.extract_flight_preferences import ExtractFlightPreferences
 from backend.nodes.flight.search_flight import SearchFlight
 from backend.nodes.itinerary.extract_itinerary_preferences import ExtractItineraryPreferences
@@ -24,6 +27,9 @@ class IntentClassifierAgent:
         self.extract_itinerary_preferences = ExtractItineraryPreferences(llm_client)
         self.extract_flight_preferences = ExtractFlightPreferences(llm_client)
         self.search_flight = SearchFlight(llm_client)
+        self.extract_flight_booking_confirmation = ExtractFlightBookingConfirmation(llm_client)
+        self.book_flight = BookFlight(llm_client)
+        self.flight_already_booked = FlightAlreadyBooked()
 
     def route_intent(self, state: State):
         if state.intent != IntentType.UNKNOWN and state.confidence > 0.6:
@@ -50,17 +56,20 @@ class IntentClassifierAgent:
         print('Im in exit')
 
     def returning_user_middleware(self, state: State) -> dict:
-        """Detect returning user from merged state: new session has only this turn's message(s)."""
-        # For a new session the runtime loads no prior checkpoint, so messages = [current].
-        # For a returning session the runtime merged prior checkpoint + input, so messages > 1.
         messages = state.messages or []
         is_returning = len(messages) > 1
-        if is_returning:
-            print("returning user")
         return {"is_returning_user": is_returning}
 
+    def _route_after_confirmation(self, state: State) -> str:
+        if state.confirmation_action == "confirm":
+            return "book_flight"
+        return "cancel"
+
     def route_after_middleware(self, state: State) -> str:
-        """Returning user with intent already set -> update preferences (delta). Else -> intent classifier."""
+        if getattr(state, "flight_booked", False):
+            return "flight_already_booked"
+        if state.last_flight_search_result:
+            return "extract_flight_booking_confirmation"
         if state.is_returning_user and state.intent is not None and state.intent != IntentType.UNKNOWN:
             if state.intent == IntentType.FLIGHT_BOOKING:
                 return "extract_flight_preferences"
@@ -78,6 +87,9 @@ class IntentClassifierAgent:
         graph.add_node("graceful_exit", self.gracefully_exit)
         graph.add_node("route_to_plan", self.route_to_plan)
         graph.add_node("search_flight", self.search_flight)
+        graph.add_node("extract_flight_booking_confirmation", self.extract_flight_booking_confirmation)
+        graph.add_node("book_flight", self.book_flight)
+        graph.add_node("flight_already_booked", self.flight_already_booked)
 
         graph.add_edge(START, "returning_user_middleware")
         graph.add_conditional_edges(
@@ -87,6 +99,8 @@ class IntentClassifierAgent:
                 "user_intent_classifier": "user_intent_classifier",
                 "extract_flight_preferences": "extract_flight_preferences",
                 "extract_itinerary_preferences": "extract_itinerary_preferences",
+                "extract_flight_booking_confirmation": "extract_flight_booking_confirmation",
+                "flight_already_booked": "flight_already_booked",
             },
         )
 
@@ -103,6 +117,14 @@ class IntentClassifierAgent:
         graph.add_edge("extract_itinerary_preferences", "route_to_plan")
         graph.add_edge("extract_flight_preferences", "search_flight")
         graph.add_edge("search_flight", END)
+
+        graph.add_conditional_edges(
+            "extract_flight_booking_confirmation",
+            self._route_after_confirmation,
+            {"book_flight": "book_flight", "cancel": END},
+        )
+        graph.add_edge("book_flight", END)
+        graph.add_edge("flight_already_booked", END)
         graph.add_edge("route_to_plan", END)
 
         graph.add_edge("graceful_exit", END)
@@ -166,5 +188,4 @@ if __name__ == "__main__":
     agent = IntentClassifierAgent(llm_client=create_llm_client())
     agent.build_workflow()
     agent.visualize_workflow()
-    #agent.invoke("Book a travel plan for 3 days in summer 2028 for 9 adults from Mumbai. Make sure its lowest budget trip. I prefer sunny days and rains.")
-    #agent.invoke("Summer 2026, 7 adults what else sure here", str("some-randome-1i381282121212857323211727123"))
+    

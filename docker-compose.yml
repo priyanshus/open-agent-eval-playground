@@ -1,5 +1,5 @@
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
     container_name: postgres-dev
     environment:
@@ -9,9 +9,43 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # If you changed POSTGRES_PASSWORD and get auth errors, remove this volume:
-      # docker compose down -v && docker compose up -d
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: backend
+    # API keys and secrets: set OPENAI_API_KEY, LANGFUSE_* etc. in .env (see .env.sample)
+    env_file:
+      - .env
+    environment:
+      POSTGRES_URI: postgresql://postgres:postgres@db:5432/langgraph
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CHAT_API_URL: http://localhost:8080
+    container_name: frontend
+    environment:
+      NEXT_PUBLIC_CHAT_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

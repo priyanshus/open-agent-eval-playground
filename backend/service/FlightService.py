@@ -1,4 +1,6 @@
 import requests
+from langchain_core.messages.tool import tool_call
+
 from backend.service.models import FlightSearchResponse, FlightSearchRequest
 
 
@@ -26,3 +28,12 @@ class FlightService:
         if "results" in data and data["results"]:
             return FlightSearchResponse.model_validate(data["results"][0])
         return FlightSearchResponse.model_validate(data)
+
+    def book_flight(self, payload: dict) -> dict:
+        response = requests.post(
+            f"{self.base_url}/book-flight",
+            json=payload,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()

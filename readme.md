@@ -1,22 +1,24 @@
 # Open Agent Evaluation Playground
 
-A minimal agentic system built with LangChain to experiment with routing, tool execution, observability and evaluation using open-source tools.
+Minimal agentic system (LangChain, LangGraph) with flight booking and routing.
 
-At present, it has:
-- Deterministic router
-- Structured execution plan
-- Tool-based API calls
-- Centralized executor
-- Langfuse Integration for Observability
+## Workflow
 
-## Architecture
-User Query → Router → Execution Plan → Executor → Tools → LLM (final response)
+![Workflow graph](workflow_graph.png)
 
-## How to Run
-```
-cd frontend
-npm install
-npm run dev
+## Run with Docker
 
-uvicorn backend.main:app --host 0.0.0.0 --port 8080   
-```
+1. Copy env and set your API keys:
+   ```bash
+   cp .env.sample .env
+   # Edit .env: OPENAI_API_KEY, LANGFUSE_* (see .env.sample)
+   ```
+
+2. Start backend, frontend, and DB:
+   ```bash
+   docker compose up --build
+   ```
+
+3. Open **http://localhost:3000** (frontend) and **http://localhost:8080** (API).
+
+*Generate the workflow diagram:* from repo root run `python -m backend.app_workflow` (writes `workflow_graph.png`).

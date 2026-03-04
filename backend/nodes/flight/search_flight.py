@@ -34,7 +34,11 @@ class SearchFlight(BaseNode):
         try:
             result = search_flight_tool.invoke({"preferences": preferences})
             ai_message = self._format_search_result(result)
-            return {"messages": [AIMessage(content=ai_message)]}
+            flight_payload = self._flight_result_to_booking_payload(result)
+            return {
+                "messages": [AIMessage(content=ai_message)],
+                "last_flight_search_result": flight_payload,
+            }
         except Exception as e:
             return {
                 "messages": [
@@ -53,7 +57,23 @@ class SearchFlight(BaseNode):
             f"- **Cabin:** {result.cabin_class}",
             f"- **Price:** ${result.price_usd:.2f} USD",
             f"- **Stops:** {result.stops}",
-
-            "Would you like me to proceed with booking this flight, or would you prefer that I explore more options for you?"
+            "Would you like me to proceed with booking this flight, or would you prefer that I explore more options for you?",
         ]
         return "\n".join(lines)
+
+    def _flight_result_to_booking_payload(self, result) -> dict:
+        dep = getattr(result, "departure_time", None)
+        arr = getattr(result, "arrival_time", None)
+        return {
+            "id": result.id,
+            "airline": result.airline,
+            "flight_number": result.flight_number,
+            "origin": result.origin,
+            "destination": result.destination,
+            "departure_time": dep.isoformat() if hasattr(dep, "isoformat") else str(dep),
+            "arrival_time": arr.isoformat() if hasattr(arr, "isoformat") else str(arr),
+            "duration_hours": result.duration_hours,
+            "cabin_class": result.cabin_class,
+            "price_usd": result.price_usd,
+            "stops": result.stops,
+        }

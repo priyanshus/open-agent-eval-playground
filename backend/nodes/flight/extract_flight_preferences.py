@@ -79,5 +79,7 @@ class ExtractFlightPreferences(BaseNode):
             lines.append(f"- **Origin:** {preferences.origin}")
         if preferences.number_of_travelers is not None:
             lines.append(f"- **Travelers:** {preferences.number_of_travelers}")
+
+        lines.append("\nWould you like to confirm this flight booking?")
         return "\n".join(lines)
 
